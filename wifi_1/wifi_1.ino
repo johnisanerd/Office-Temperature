@@ -3,7 +3,7 @@
 
 //  https://docs.arduino.cc/hardware/mkr-env-shield
 //  https://docs.arduino.cc/tutorials/mkr-env-shield/mkr-env-shield-basic
-//  In-depth wifi documentation on webhooks:  https://maker.ifttt.com/trigger/{event}/with/key/{webhooks_key}?value1=value1&value2=value2&value3=value3
+//  In-depth wifi documentation on webhooks:  https://help.ifttt.com/hc/en-us/articles/115010230347
 
 #include <WiFiNINA.h>
 #include <Arduino_MKRENV.h>
@@ -13,6 +13,13 @@
 char ssid[] = SECRET_SSID;        // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
+
+// Initialize the Ethernet client library
+// with the IP address and port of the server
+// that you want to connect to (port 80 is default for HTTP):
+WiFiSSLClient client;
+
+
 
 void setup() {
   // Initialize the sensors.
@@ -57,7 +64,7 @@ void loop() {
  delay(1000);
  printData();
  getSensors();
- 
+ turnOn();
  Serial.println("----------------------------------------");
 }
 
@@ -130,11 +137,47 @@ void printData() {
   Serial.println();
 }
 
-void turnOn() {
 // turn_off
 // https://arduinogetstarted.com/tutorials/arduino-ifttt
 // Send the trigger without data:  http://maker.ifttt.com/trigger/EVENT-NAME/with/key/YOUR-KEY
 // KEY:  Your key is: xxxxxxx
 // EVENT:  turn_off / turn_on
+
+void turnOn() {
+
+  char url[200];
+
+  char host[] = "http://maker.ifttt.com";
+  char server[] = "GET /trigger/turn_on/with/key/"; 
+  char your_key[] = SECRET_KEY;
+  strcpy(url, server);
+  strcpy(url + strlen(server), your_key);
+
+  Serial.print("URL: ");
+  Serial.println(url);
+
+  if (client.connect(host, 443)) {
+    Serial.println("connected to server");
+    // Make a HTTP request:
+    client.println(url);
+    client.println("Host: maker.ifttt.com");
+    client.println("Connection: close");
+    client.println();
+  }
+
+
+}
+
+void turnOff() {
+
+  char url[200];
+
+  char server[] = "http://maker.ifttt.com/trigger/turn_off/with/key/"; 
+  char your_key[] = SECRET_KEY;
+  strcpy(url, server);
+  strcpy(url + strlen(server), your_key);
+
+  Serial.print("URL: ");
+  Serial.println(url);
 
 }
