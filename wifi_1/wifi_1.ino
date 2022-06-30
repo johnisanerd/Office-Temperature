@@ -36,18 +36,6 @@ void setup() {
     Serial.println(pass);
     // Connect to WPA/WPA2 network:
     status = WiFi.begin(ssid, pass);
-
-    /*
-    // wait 100 seconds for connection:
-    for(int i = 0; i < 10; i++){
-       delay(10000);
-       Serial.print("Status: ");
-       Serial.print(status);
-       Serial.print(".  Iteration: ");
-       Serial.println(i);
-     }
-     */
- 
   }
 
   // you're connected now, so print out the data:
@@ -65,6 +53,8 @@ void loop() {
  printData();
  getSensors();
  turnOn();
+ // turnOff();
+
  Serial.println("----------------------------------------");
 }
 
@@ -147,13 +137,16 @@ void turnOn() {
 
   char url[200];
 
-  char host[] = "http://maker.ifttt.com";
-  char server[] = "GET /trigger/turn_on/with/key/"; 
+  char host[] = "maker.ifttt.com";
+  char server[] = "POST /trigger/turn_on/with/key/"; 
   char your_key[] = SECRET_KEY;
   strcpy(url, server);
   strcpy(url + strlen(server), your_key);
 
   Serial.print("URL: ");
+  Serial.println(host);
+
+  Serial.print("COMMAND: ");
   Serial.println(url);
 
   if (client.connect(host, 443)) {
@@ -163,21 +156,35 @@ void turnOn() {
     client.println("Host: maker.ifttt.com");
     client.println("Connection: close");
     client.println();
+    Serial.println("done");
   }
-
-
 }
 
 void turnOff() {
 
   char url[200];
 
-  char server[] = "http://maker.ifttt.com/trigger/turn_off/with/key/"; 
+  char host[] = "maker.ifttt.com";
+  char server[] = "POST /trigger/turn_off/with/key/"; 
   char your_key[] = SECRET_KEY;
   strcpy(url, server);
   strcpy(url + strlen(server), your_key);
 
   Serial.print("URL: ");
+  Serial.println(host);
+
+  Serial.print("COMMAND: ");
   Serial.println(url);
+
+  if (client.connect(host, 443)) {
+    Serial.println("connected to server");
+    // Make a HTTP request:
+    client.println(url);
+    client.println("Host: maker.ifttt.com");
+    client.println("Connection: close");
+    client.println();
+    Serial.println("done");
+  }
+
 
 }
