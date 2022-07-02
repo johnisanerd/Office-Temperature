@@ -8,6 +8,16 @@
 #include <WiFiNINA.h>
 #include <Arduino_MKRENV.h>
 #include "arduino_secrets.h"  // We're keeping our SSID and other sensitive information in this file.
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+WiFiUDP ntpUDP;
+// You can specify the time server pool and the offset (in seconds, can be
+// changed later with setTimeOffset() ). Additionally you can specify the
+// update interval (in milliseconds, can be changed using setUpdateInterval() ).
+NTPClient timeClient(ntpUDP, "time-a-g.nist.gov", -14400, 60000);
+
+bool debug_serial_monitor_on = true;
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;        // your network SSID (name)
@@ -19,9 +29,11 @@ int status = WL_IDLE_STATUS;     // the Wifi radio's status
 // that you want to connect to (port 80 is default for HTTP):
 WiFiSSLClient client;
 
-
-
 void setup() {
+
+  // Setup the time client.
+  timeClient.begin();
+
   // Initialize the sensors.
   ENV.begin();
   
@@ -47,15 +59,48 @@ void setup() {
 }
 
 void loop() {
-  // check the network connection once every 10 seconds:
+  // once every 60 seconds:
 
- delay(1000);
- printData();
- getSensors();
- turnOn();
- // turnOff();
+  delay(6000);
+  getSensors();
+
+  manage_temperature();
 
  Serial.println("----------------------------------------");
+}
+
+// Simply read the temperature and return it.  
+int getTemperature(){
+  float temperature = ENV.readTemperature();
+  return int(temperature);
+}
+
+int getTime(){
+  timeClient.update();
+
+  Serial.println(timeClient.getFormattedTime());
+}
+
+// Function will check the time, temperature, and turn the A/C on and off.
+void manage_temperature(){
+
+  // Get the time.  
+  getTime();
+
+  // Get the temp.
+  int temp = getTemperature();
+  /* 
+  Serial.print("Temperature: ");
+  Serial.println(temp);
+  */
+
+
+  // If the temperature is above threshold, turn the A/C on.
+  // If the temperature is below threshold, turn the A/C off.  
+  // If the tempearture is in the range, leave the AC be.  
+
+  // turnOn();
+ // turnOff();
 }
 
 void getSensors(){
@@ -152,7 +197,10 @@ void turnOn() {
   if (client.connect(host, 443)) {
     Serial.println("connected to server");
     // Make a HTTP request:
-    client.println(url);
+    // client.println(url);
+
+    // HTTP/1.1
+    client.println("POST /trigger/turn_on/with/key/L1A_QUONyD5v7I84-Hjef HTTP/1.1");
     client.println("Host: maker.ifttt.com");
     client.println("Connection: close");
     client.println();
@@ -179,7 +227,11 @@ void turnOff() {
   if (client.connect(host, 443)) {
     Serial.println("connected to server");
     // Make a HTTP request:
-    client.println(url);
+    // client.println(url);
+
+    // HTTP/1.1
+    client.println("POST /trigger/turn_off/with/key/L1A_QUONyD5v7I84-Hjef HTTP/1.1");
+    
     client.println("Host: maker.ifttt.com");
     client.println("Connection: close");
     client.println();
