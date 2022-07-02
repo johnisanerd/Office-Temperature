@@ -11,6 +11,12 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
+int work_strt = 6;  // Hour that work is starting.
+int work_end  = 22;  // Hour that work is ending.  
+
+int temp_high = 30; // Turn on the cool.
+int temp_low = 25;  // Turn off the cool.
+
 WiFiUDP ntpUDP;
 // You can specify the time server pool and the offset (in seconds, can be
 // changed later with setTimeOffset() ). Additionally you can specify the
@@ -75,25 +81,51 @@ int getTemperature(){
   return int(temperature);
 }
 
+// Returns time in hours.
+
 int getTime(){
   timeClient.update();
 
-  Serial.println(timeClient.getFormattedTime());
+  // Serial.println(timeClient.getFormattedTime());
+  Serial.println(timeClient.getHours());
+  // We really only need the hour, so we can roughly know when we
+  // are turning the temperature up and down.  
+
+  return timeClient.getHours();
 }
 
 // Function will check the time, temperature, and turn the A/C on and off.
 void manage_temperature(){
 
-  // Get the time.  
-  getTime();
-
+  // Get the time, in hour.
+  int current_hour = getTime();
   // Get the temp.
-  int temp = getTemperature();
-  /* 
-  Serial.print("Temperature: ");
-  Serial.println(temp);
-  */
-
+  int current_temp = getTemperature();
+ 
+  // Are we between the time to start and time to end?
+  if((current_hour > work_strt) && (current_hour < work_end)){
+    // Are we greater than the temperature?
+    if(current_temp > temp_high){
+      // Turn the AC on.
+      Serial.println("Higher than threshold, turn the AC on.");
+      turnOn();
+    }
+    else{
+      // Do nothing.  
+      Serial.println("In time range.  Temp is not higher than threshold temp.  Doing nothin.");
+    };
+    if(current_temp < temp_low){
+      // Turn the AC off.  
+      Serial.println("Current temp lower than threshold, turn the AC off.");
+      turnOff();
+    }
+  }
+  else{
+    // Outside the working hours.  
+    // Turn the AC off.
+    Serial.println("Turning the AC off.  Outisde work time.  Turn AC off.");
+    turnOff();
+  }
 
   // If the temperature is above threshold, turn the A/C on.
   // If the temperature is below threshold, turn the A/C off.  
