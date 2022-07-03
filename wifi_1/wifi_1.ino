@@ -14,8 +14,8 @@
 int work_strt = 6;  // Hour that work is starting.
 int work_end  = 22;  // Hour that work is ending.  
 
-int temp_high = 30; // Turn on the cool.
-int temp_low = 25;  // Turn off the cool.
+int temp_high = 22; // Turn on the cool.
+int temp_low = 20;  // Turn off the cool.
 
 WiFiUDP ntpUDP;
 // You can specify the time server pool and the offset (in seconds, can be
@@ -68,8 +68,7 @@ void loop() {
   // once every 60 seconds:
 
   delay(6000);
-  getSensors();
-
+  getSensors();  // Print the sensor readings for debugging.
   manage_temperature();
 
  Serial.println("----------------------------------------");
@@ -87,6 +86,7 @@ int getTime(){
   timeClient.update();
 
   // Serial.println(timeClient.getFormattedTime());
+  Serial.print("Time in hours: ");
   Serial.println(timeClient.getHours());
   // We really only need the hour, so we can roughly know when we
   // are turning the temperature up and down.  
