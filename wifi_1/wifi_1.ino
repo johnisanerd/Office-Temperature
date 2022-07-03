@@ -11,11 +11,11 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-int work_strt = 6;  // Hour that work is starting.
-int work_end  = 22;  // Hour that work is ending.  
+int work_strt = 6;  // Hour that work is starting. 6 PM to get ready for me coming in.
+int work_end  = 20;  // Hour that work is ending.  8 PM to get 
 
-int temp_high = 22; // Turn on the cool.
-int temp_low = 20;  // Turn off the cool.
+int temp_high = 24; // Turn on the cool.
+int temp_low = 23;  // Turn off the cool.
 
 WiFiUDP ntpUDP;
 // You can specify the time server pool and the offset (in seconds, can be
@@ -101,7 +101,9 @@ void manage_temperature(){
   int current_hour = getTime();
   // Get the temp.
   int current_temp = getTemperature();
- 
+  Serial.print("Current temperature is: ");
+  Serial.println(current_temp);
+
   // Are we between the time to start and time to end?
   if((current_hour > work_strt) && (current_hour < work_end)){
     // Are we greater than the temperature?
@@ -114,7 +116,7 @@ void manage_temperature(){
       // Do nothing.  
       Serial.println("In time range.  Temp is not higher than threshold temp.  Doing nothin.");
     };
-    if(current_temp < temp_low){
+    if(current_temp <= temp_low){
       // Turn the AC off.  
       Serial.println("Current temp lower than threshold, turn the AC off.");
       turnOff();
@@ -129,10 +131,7 @@ void manage_temperature(){
 
   // If the temperature is above threshold, turn the A/C on.
   // If the temperature is below threshold, turn the A/C off.  
-  // If the tempearture is in the range, leave the AC be.  
-
-  // turnOn();
- // turnOff();
+  // If the tempearture is in the range, leave the AC be.
 }
 
 void getSensors(){
