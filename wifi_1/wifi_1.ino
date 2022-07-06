@@ -11,6 +11,8 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
+int debug = 0;      // Turns serial debugging on and off. 
+
 int work_strt = 6;  // Hour that work is starting. 6 PM to get ready for me coming in.
 int work_end  = 20;  // Hour that work is ending.  8 PM to get 
 
@@ -45,7 +47,9 @@ void setup() {
   
   //Initialize serial and wait for port to open:
   Serial.begin(9600);
-  while (!Serial);
+  if(debug){
+    while (!Serial)
+  };
 
   // attempt to connect to Wifi network:
   while (status != WL_CONNECTED) {
