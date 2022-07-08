@@ -22,7 +22,8 @@
 // you can leave debug on (1), if it's not it's important to turn the debug off (ie a standalone device)
 // Otherwise the serial gets hung up, and the machine waits for a serial line. 
 
-int debug_on = 0;      // Turns serial debugging on and off. 
+int debug_on = 0;      // Turns serial debugging on and off.
+                       // O is off.  1 is debug on.
 
 // Hours of operation.  This is so it doesn't work overnight and waste my money.
 int work_strt = 6;  // Hour that work is starting. 6 PM to get ready for me coming in.
