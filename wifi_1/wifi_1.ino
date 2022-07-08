@@ -1,9 +1,16 @@
 // This project is a way to turn the A/C and heat on and off in my room.
-// Using wyze plugs, and an Arduino MKR system.
+// The A/C is controlled with a wyze plugs, 
+// The hardware is a Arduino MKR system.
+// This will check the time, and then the temperature, and decide whether to turn the A/C on and off.
+// There's some tuning: finding the temperature levels to turn it on and off.
 
 //  https://docs.arduino.cc/hardware/mkr-env-shield
 //  https://docs.arduino.cc/tutorials/mkr-env-shield/mkr-env-shield-basic
 //  In-depth wifi documentation on webhooks:  https://help.ifttt.com/hc/en-us/articles/115010230347
+
+//  Hardware isn't ideal:  the env shield can heat up because it's overtop the wifi device. 
+//  The wifi chip really heats it up and makes it higher temp than it is.  So mount it pointed vertically.
+//  In my case, I'm pointing it upwards, so the sensor isn't on top of the chip, and air flows upward.
 
 #include <WiFiNINA.h>
 #include <Arduino_MKRENV.h>
@@ -11,30 +18,38 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-int debug = 0;      // Turns serial debugging on and off. 
+// Turning debug on and off.  If it's attached to a serial terminal, ie a computer,
+// you can leave debug on (1), if it's not it's important to turn the debug off (ie a standalone device)
+// Otherwise the serial gets hung up, and the machine waits for a serial line. 
 
+int debug_on = 1;      // Turns serial debugging on and off. 
+
+// Hours of operation.  This is so it doesn't work overnight and waste my money.
 int work_strt = 6;  // Hour that work is starting. 6 PM to get ready for me coming in.
 int work_end  = 20;  // Hour that work is ending.  8 PM to get 
 
-int temp_high = 24; // Turn on the cool.
-int temp_low = 23;  // Turn off the cool.
+// Temperature range.  This is so it doesn't run too hot or cold. 
+int temp_high = 26; // Turn on the cool.
+int temp_low = 25;  // Turn off the cool.
 
+// Weekday orverride.
+int weekday_override = 0;  // If it's zero, we go with the normally off on weekdays.
+                          // If it's 1, we run on weekends.
+
+// NTP server.  We're running the server to get the time, date, etc.
 WiFiUDP ntpUDP;
 // You can specify the time server pool and the offset (in seconds, can be
 // changed later with setTimeOffset() ). Additionally you can specify the
 // update interval (in milliseconds, can be changed using setUpdateInterval() ).
 NTPClient timeClient(ntpUDP, "time-a-g.nist.gov", -14400, 60000);
 
-bool debug_serial_monitor_on = true;
-
-///////please enter your sensitive data in the Secret tab/arduino_secrets.h
+// Sensitive data in the Secret tab/arduino_secrets.h .  IE the SSID and PASSWORD
 char ssid[] = SECRET_SSID;        // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
+
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
-// Initialize the Ethernet client library
-// with the IP address and port of the server
-// that you want to connect to (port 80 is default for HTTP):
+// Initialize the Ethernet client library.
 WiFiSSLClient client;
 
 void setup() {
@@ -45,36 +60,42 @@ void setup() {
   // Initialize the sensors.
   ENV.begin();
   
-  //Initialize serial and wait for port to open:
-  Serial.begin(9600);
-  if(debug){
-    while (!Serial)
+  //Initialize serial and wait for port to open.
+  // It's important this is optional and not run when run as standalone.
+  // Or it's going to sit and wait for the serial to connect.
+  if(debug_on){
+    Serial.begin(9600);
+    while (!Serial);
   };
 
-  // attempt to connect to Wifi network:
+  // Connect to Wifi network
   while (status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to network: ");
-    Serial.println(ssid);
-    Serial.println(pass);
-    // Connect to WPA/WPA2 network:
+    if(debug_on){
+      Serial.print("Attempting to connect to network: ");
+      Serial.println(ssid);
+      Serial.println(pass);
+      // Connect to WPA/WPA2 network:
+    };
     status = WiFi.begin(ssid, pass);
   }
 
   // you're connected now, so print out the data:
-  Serial.println("You're connected to the network");
-  
-  Serial.println("----------------------------------------");
-  printData();
-  Serial.println("----------------------------------------");
+  if(debug_on){
+    Serial.println("You're connected to the network");
+    Serial.println("----------------------------------------");
+    printData();
+    Serial.println("----------------------------------------");
+  };
 }
 
 void loop() {
-  // once every 60 seconds:
+  // Check the temp and time once every 60 seconds.
+  // Then manage the temp every minute.
 
   delay(6000);
   getSensors();  // Print the sensor readings for debugging.
   manage_temperature();
-
+  day_of_week();
  Serial.println("----------------------------------------");
 }
 
@@ -108,29 +129,35 @@ void manage_temperature(){
   Serial.print("Current temperature is: ");
   Serial.println(current_temp);
 
-  // Are we between the time to start and time to end?
-  if((current_hour > work_strt) && (current_hour < work_end)){
-    // Are we greater than the temperature?
-    if(current_temp > temp_high){
-      // Turn the AC on.
-      Serial.println("Higher than threshold, turn the AC on.");
-      turnOn();
+  // Is it a weekday?
+  // IE is it NOT Sunday (0) or Saturday (6)
+  int weekday = day_of_week();
+  // Run the logic first.
+  if(weekday != 0 && weekday != 6){
+    // Are we between the time to start and time to end?
+    if((current_hour > work_strt) && (current_hour < work_end)){
+      // Are we greater than the temperature?
+      if(current_temp > temp_high){
+        // Turn the AC on.
+        Serial.println("Higher than threshold, turn the AC on.");
+        turnOn();
+      }
+      else{
+        // Do nothing.  
+        Serial.println("In time range.  Temp is not higher than threshold temp.  Doing nothin.");
+      };
+      if(current_temp <= temp_low){
+        // Turn the AC off.  
+        Serial.println("Current temp lower than threshold, turn the AC off.");
+        turnOff();
+      }
     }
     else{
-      // Do nothing.  
-      Serial.println("In time range.  Temp is not higher than threshold temp.  Doing nothin.");
-    };
-    if(current_temp <= temp_low){
-      // Turn the AC off.  
-      Serial.println("Current temp lower than threshold, turn the AC off.");
+      // Outside the working hours.  
+      // Turn the AC off.
+      Serial.println("Turning the AC off.  Outisde work time.  Turn AC off.");
       turnOff();
     }
-  }
-  else{
-    // Outside the working hours.  
-    // Turn the AC off.
-    Serial.println("Turning the AC off.  Outisde work time.  Turn AC off.");
-    turnOff();
   }
 
   // If the temperature is above threshold, turn the A/C on.
@@ -163,11 +190,13 @@ void getSensors(){
   Serial.print(pressure);
   Serial.println(" kPa");
 
-
+  
   Serial.print("Illuminance = ");
   Serial.print(illuminance);
   Serial.println(" lx");
 
+  // All the other readings are just bullshit, you don't need them for this project.
+  /*
   Serial.print("UVA         = ");
   Serial.println(uva);
 
@@ -176,7 +205,7 @@ void getSensors(){
 
   Serial.print("UV Index    = ");
   Serial.println(uvIndex);
-
+  */
   // print an empty line
 
   Serial.println();
@@ -207,12 +236,7 @@ void printData() {
   Serial.println();
 }
 
-// turn_off
-// https://arduinogetstarted.com/tutorials/arduino-ifttt
-// Send the trigger without data:  http://maker.ifttt.com/trigger/EVENT-NAME/with/key/YOUR-KEY
-// KEY:  Your key is: xxxxxxx
-// EVENT:  turn_off / turn_on
-
+// Turn on the Wyze plug.
 void turnOn() {
 
   char url[200];
@@ -232,8 +256,6 @@ void turnOn() {
   if (client.connect(host, 443)) {
     Serial.println("connected to server");
     // Make a HTTP request:
-    // client.println(url);
-
     // HTTP/1.1
     client.println("POST /trigger/turn_on/with/key/L1A_QUONyD5v7I84-Hjef HTTP/1.1");
     client.println("Host: maker.ifttt.com");
@@ -261,10 +283,6 @@ void turnOff() {
 
   if (client.connect(host, 443)) {
     Serial.println("connected to server");
-    // Make a HTTP request:
-    // client.println(url);
-
-    // HTTP/1.1
     client.println("POST /trigger/turn_off/with/key/L1A_QUONyD5v7I84-Hjef HTTP/1.1");
     
     client.println("Host: maker.ifttt.com");
@@ -273,5 +291,56 @@ void turnOff() {
     Serial.println("done");
   }
 
+}
 
+int day_of_week(){
+  // This is completely stolen from greater programmers than myself.  In the interest of time,
+  // going to thank them and just keep it.  
+  // https://forum.arduino.cc/t/got-time-from-ntp-server-need-day-of-week/117799/2
+
+  timeClient.update();
+  timeClient.getDay();
+  Serial.print("Day of the week: ");
+  Serial.println(timeClient.getDay());
+  return timeClient.getDay();
+  /*
+  // Serial.println(timeClient.getFormattedTime());
+  Serial.print("Time in hours: ");
+  Serial.println(timeClient.getHours());
+  // We really only need the hour, so we can roughly know when we
+  // are turning the temperature up and down.  
+
+  return timeClient.getHours();
+
+  long day = epoch / 86400L;  //   if (epoch % 86400L) is the time of day, (epoch / 86400L) is the number of days since epoch:
+
+  // Since there are 7 days a week:
+
+  int day_of_the_week = (day+4) % 7;
+
+  
+  /*
+  0 = Sunday
+  1 = Mon
+  2 = Tue 
+  3 = Wed 
+  4 = Thu
+  5 = Fri 
+  6 = Sat 
+  7 = Sun 
+  */
+  // return day_of_the_week;
+  /*
+  Since January 1, 1970 was a Thursday the results are:
+
+    0=Thursday
+    1=Friday
+    2=Saturday
+    3=Sunday
+    4=Monday
+    5=Tuesday
+    6=Wednesday
+
+  If you want 0 to be Sunday, use "(day+4) % 7" instead.
+  */
 }
