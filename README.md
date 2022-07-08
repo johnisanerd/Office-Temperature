@@ -5,6 +5,7 @@
 
 # Troubleshooting Notes
 Shows up on the LAN as "Espressif Inc.".  This may be important in troubleshooting.
+You can also go to the IFTT site, and check when the last call was made.
 
 # Todos
 * Needs a web interface to allow you to turn on and off.

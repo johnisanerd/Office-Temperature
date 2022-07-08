@@ -22,7 +22,7 @@
 // you can leave debug on (1), if it's not it's important to turn the debug off (ie a standalone device)
 // Otherwise the serial gets hung up, and the machine waits for a serial line. 
 
-int debug_on = 1;      // Turns serial debugging on and off. 
+int debug_on = 0;      // Turns serial debugging on and off. 
 
 // Hours of operation.  This is so it doesn't work overnight and waste my money.
 int work_strt = 6;  // Hour that work is starting. 6 PM to get ready for me coming in.
@@ -31,10 +31,6 @@ int work_end  = 20;  // Hour that work is ending.  8 PM to get
 // Temperature range.  This is so it doesn't run too hot or cold. 
 int temp_high = 26; // Turn on the cool.
 int temp_low = 25;  // Turn off the cool.
-
-// Weekday orverride.
-int weekday_override = 0;  // If it's zero, we go with the normally off on weekdays.
-                          // If it's 1, we run on weekends.
 
 // NTP server.  We're running the server to get the time, date, etc.
 WiFiUDP ntpUDP;
@@ -95,7 +91,7 @@ void loop() {
   delay(6000);
   getSensors();  // Print the sensor readings for debugging.
   manage_temperature();
-  day_of_week();
+  // day_of_week();
  Serial.println("----------------------------------------");
 }
 
@@ -294,53 +290,12 @@ void turnOff() {
 }
 
 int day_of_week(){
-  // This is completely stolen from greater programmers than myself.  In the interest of time,
-  // going to thank them and just keep it.  
-  // https://forum.arduino.cc/t/got-time-from-ntp-server-need-day-of-week/117799/2
-
+  // NTP has a day of the week function.
+  // 0 = Sunday.  6 = Saturday.
   timeClient.update();
   timeClient.getDay();
   Serial.print("Day of the week: ");
   Serial.println(timeClient.getDay());
   return timeClient.getDay();
-  /*
-  // Serial.println(timeClient.getFormattedTime());
-  Serial.print("Time in hours: ");
-  Serial.println(timeClient.getHours());
-  // We really only need the hour, so we can roughly know when we
-  // are turning the temperature up and down.  
-
-  return timeClient.getHours();
-
-  long day = epoch / 86400L;  //   if (epoch % 86400L) is the time of day, (epoch / 86400L) is the number of days since epoch:
-
-  // Since there are 7 days a week:
-
-  int day_of_the_week = (day+4) % 7;
-
   
-  /*
-  0 = Sunday
-  1 = Mon
-  2 = Tue 
-  3 = Wed 
-  4 = Thu
-  5 = Fri 
-  6 = Sat 
-  7 = Sun 
-  */
-  // return day_of_the_week;
-  /*
-  Since January 1, 1970 was a Thursday the results are:
-
-    0=Thursday
-    1=Friday
-    2=Saturday
-    3=Sunday
-    4=Monday
-    5=Tuesday
-    6=Wednesday
-
-  If you want 0 to be Sunday, use "(day+4) % 7" instead.
-  */
 }
