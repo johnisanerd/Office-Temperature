@@ -3,7 +3,9 @@
 // The hardware is a Arduino MKR system.
 // This will check the time, and then the temperature, and decide whether to turn the A/C on and off.
 // There's some tuning: finding the temperature levels to turn it on and off.
+// The Arduino LED will toggle for 1 second every minue if it's connected to the wifi properly and running the main loop.
 
+//  https://docs.arduino.cc/tutorials/mkr-wifi-1010/connecting-to-wifi-network
 //  https://docs.arduino.cc/hardware/mkr-env-shield
 //  https://docs.arduino.cc/tutorials/mkr-env-shield/mkr-env-shield-basic
 //  In-depth wifi documentation on webhooks:  https://help.ifttt.com/hc/en-us/articles/115010230347
@@ -17,6 +19,7 @@
 #include "arduino_secrets.h"  // We're keeping our SSID and other sensitive information in this file.
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <wdt_samd21.h>       // Watchdog Timer -->  https://github.com/gpb01/wdt_samd21
 
 // Turning debug on and off.  If it's attached to a serial terminal, ie a computer,
 // you can leave debug on (1), if it's not it's important to turn the debug off (ie a standalone device)
@@ -50,7 +53,11 @@ int status = WL_IDLE_STATUS;     // the Wifi radio's status
 WiFiSSLClient client;
 
 void setup() {
-
+  // initialize digital pin LED_BUILTIN as an output.
+  // This will blink if we're connected to the internet.
+  pinMode(LED_BUILTIN, OUTPUT);
+  // Watchdog timer initialize.
+  wdt_init ( WDT_CONFIG_PER_16K ); //  WDT_CONFIG_PER_16K  16384 clock cycles (16 sec.)
   // Setup the time client.
   timeClient.begin();
 
@@ -60,21 +67,13 @@ void setup() {
   //Initialize serial and wait for port to open.
   // It's important this is optional and not run when run as standalone.
   // Or it's going to sit and wait for the serial to connect.
+  Serial.begin(9600);
   if(debug_on){
-    Serial.begin(9600);
     while (!Serial);
+    wdt_reset();
   };
 
-  // Connect to Wifi network
-  while (status != WL_CONNECTED) {
-    if(debug_on){
-      Serial.print("Attempting to connect to network: ");
-      Serial.println(ssid);
-      Serial.println(pass);
-      // Connect to WPA/WPA2 network:
-    };
-    status = WiFi.begin(ssid, pass);
-  }
+  start_wifi();
 
   // you're connected now, so print out the data:
   if(debug_on){
@@ -90,10 +89,40 @@ void loop() {
   // Then manage the temp every minute.
 
   delay(6000);
-  getSensors();  // Print the sensor readings for debugging.
-  manage_temperature();
+  getSensors();           // Print the sensor readings for debugging.
+  manage_temperature();   // Turn everything on and off, do the hard work.  
+  indicate_wifi();        // Show that wifi is connected.
   // day_of_week();
  Serial.println("----------------------------------------");
+}
+
+void start_wifi(){
+  // Connect to Wifi network
+  while (status != WL_CONNECTED) {
+    if(debug_on){
+      Serial.print("Attempting to connect to network: ");
+      Serial.println(ssid);
+      Serial.println(pass);
+      // Connect to WPA/WPA2 network:
+    };
+    status = WiFi.begin(ssid, pass);
+  }
+}
+
+int indicate_wifi(){
+  // This function blinks the LED if it's connected to wifi.  
+  // If it's not connected to wifi, it turns solid on.  
+  // https://www.arduino.cc/reference/en/libraries/wifinina/wifi.status/
+  if(WiFi.status() == WL_CONNECTED){
+    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
+    delay(1000);                       // wait for a second
+    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+    delay(1000);                       // wait for a second
+  } else {
+      digitalWrite(LED_BUILTIN, LOW);   // turn the LED Off
+      delay(1000);
+      start_wifi(); // Wifi is not connected, so restart the wifi connection.   
+  }
 }
 
 // Simply read the temperature and return it.  

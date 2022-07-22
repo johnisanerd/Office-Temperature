@@ -1,0 +1,5 @@
+{
+    "port": "/dev/tty.usbmodem141301",
+    "board": "arduino:samd:mkrwifi1010",
+    "sketch": "wifi_1.ino"
+}
