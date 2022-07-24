@@ -42,6 +42,7 @@
                 "/Users/johncole/Documents/Arduino/libraries/Arduino_MKRENV/src",
                 "/Users/johncole/Library/Arduino15/packages/arduino/hardware/samd/1.8.13/libraries/Wire",
                 "/Users/johncole/Documents/Arduino/libraries/NTPClient",
+                "/Users/johncole/Documents/Arduino/libraries/wdt_samd21/src",
                 "/Users/johncole/Library/Arduino15/packages/arduino/hardware/samd/1.8.13/libraries/SPI",
                 "/Users/johncole/Library/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/arm-none-eabi/include/c++/7.2.1",
                 "/Users/johncole/Library/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/arm-none-eabi/include/c++/7.2.1/arm-none-eabi",

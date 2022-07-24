@@ -53,11 +53,16 @@ int status = WL_IDLE_STATUS;     // the Wifi radio's status
 WiFiSSLClient client;
 
 void setup() {
+  Serial.println("#############################################");
+  Serial.println("#############################################");
+  Serial.println("######## Restarting Device ##################");
+  Serial.println("#############################################");
+
   // initialize digital pin LED_BUILTIN as an output.
   // This will blink if we're connected to the internet.
   pinMode(LED_BUILTIN, OUTPUT);
   // Watchdog timer initialize.
-  wdt_init ( WDT_CONFIG_PER_16K ); //  WDT_CONFIG_PER_16K  16384 clock cycles (16 sec.)
+  wdt_init(WDT_CONFIG_PER_16K); //  WDT_CONFIG_PER_16K  16384 clock cycles (16 sec.)
   // Setup the time client.
   timeClient.begin();
 
@@ -88,7 +93,11 @@ void loop() {
   // Check the temp and time once every 60 seconds.
   // Then manage the temp every minute.
 
-  delay(6000);
+  // Delay for 60 seconds, but reset the WDT.
+  for(int i = 0; i < 5; i++){
+    delay(1000);
+    wdt_reset();
+  }
   getSensors();           // Print the sensor readings for debugging.
   manage_temperature();   // Turn everything on and off, do the hard work.  
   indicate_wifi();        // Show that wifi is connected.
@@ -107,6 +116,7 @@ void start_wifi(){
     };
     status = WiFi.begin(ssid, pass);
   }
+  wdt_reset();
 }
 
 int indicate_wifi(){
@@ -123,6 +133,7 @@ int indicate_wifi(){
       delay(1000);
       start_wifi(); // Wifi is not connected, so restart the wifi connection.   
   }
+  wdt_reset();
 }
 
 // Simply read the temperature and return it.  
@@ -141,7 +152,7 @@ int getTime(){
   Serial.println(timeClient.getHours());
   // We really only need the hour, so we can roughly know when we
   // are turning the temperature up and down.  
-
+  wdt_reset();
   return timeClient.getHours();
 }
 
@@ -260,6 +271,7 @@ void printData() {
   Serial.print("Encryption Type:");
   Serial.println(encryption, HEX);
   Serial.println();
+  wdt_reset();
 }
 
 // Turn on the Wyze plug.
@@ -289,6 +301,7 @@ void turnOn() {
     client.println();
     Serial.println("done");
   }
+  wdt_reset();
 }
 
 void turnOff() {
@@ -316,7 +329,7 @@ void turnOff() {
     client.println();
     Serial.println("done");
   }
-
+  wdt_reset();
 }
 
 int day_of_week(){
@@ -326,6 +339,6 @@ int day_of_week(){
   timeClient.getDay();
   Serial.print("Day of the week: ");
   Serial.println(timeClient.getDay());
+  wdt_reset();
   return timeClient.getDay();
-  
 }
